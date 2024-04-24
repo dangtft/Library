@@ -135,3 +135,10 @@ C:\Users\Admin\Desktop\LTWeb2\API_LIBRARY\API_LIBRARY\obj\Debug\net8.0\refint\AP
 C:\Users\Admin\Desktop\LTWeb2\API_LIBRARY\API_LIBRARY\obj\Debug\net8.0\API_LIBRARY.pdb
 C:\Users\Admin\Desktop\LTWeb2\API_LIBRARY\API_LIBRARY\obj\Debug\net8.0\API_LIBRARY.genruntimeconfig.cache
 C:\Users\Admin\Desktop\LTWeb2\API_LIBRARY\API_LIBRARY\obj\Debug\net8.0\ref\API_LIBRARY.dll
+C:\Users\Admin\Desktop\LTWeb2\API_LIBRARY\API_LIBRARY\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+C:\Users\Admin\Desktop\LTWeb2\API_LIBRARY\API_LIBRARY\bin\Debug\net8.0\Microsoft.AspNetCore.Cryptography.Internal.dll
+C:\Users\Admin\Desktop\LTWeb2\API_LIBRARY\API_LIBRARY\bin\Debug\net8.0\Microsoft.AspNetCore.Cryptography.KeyDerivation.dll
+C:\Users\Admin\Desktop\LTWeb2\API_LIBRARY\API_LIBRARY\bin\Debug\net8.0\Microsoft.AspNetCore.Identity.EntityFrameworkCore.dll
+C:\Users\Admin\Desktop\LTWeb2\API_LIBRARY\API_LIBRARY\bin\Debug\net8.0\Microsoft.Extensions.Identity.Core.dll
+C:\Users\Admin\Desktop\LTWeb2\API_LIBRARY\API_LIBRARY\bin\Debug\net8.0\Microsoft.Extensions.Identity.Stores.dll
+C:\Users\Admin\Desktop\LTWeb2\API_LIBRARY\API_LIBRARY\bin\Debug\net8.0\Microsoft.Extensions.Options.dll

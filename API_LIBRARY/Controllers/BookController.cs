@@ -4,33 +4,82 @@ using Microsoft.AspNetCore.Mvc;
 using API_LIBRARY.DTO;
 using API_LIBRARY.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace API_LIBRARY.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    //[Authorize]
     public class BookController : ControllerBase
     {
         private LibaryDbContext _db;
         private readonly IBookRepository _bookRepository;
-        public BookController(IBookRepository bookRepository,LibaryDbContext libaryDbContext)
+        private ILogger<BookController> _logger;
+        public BookController(IBookRepository bookRepository,LibaryDbContext libaryDbContext, ILogger<BookController> logger)
         {
             _bookRepository = bookRepository;
             _db = libaryDbContext;
+            _logger = logger;
         }
 
         [HttpGet("get-all-book")]
-        public async Task<IActionResult> GetBooks()
+        public async Task<IActionResult> GetBooks([FromQuery] string? filterOn, [FromQuery] string? filterQuery,
+                               [FromQuery] string? sortBy, [FromQuery] bool isAscending,
+                               [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 100)
         {
-            var books = await _db.Books.Include(b => b.Publisher).Include(b => b.BookAuthors).ThenInclude(ba => ba.Author).ToListAsync();
+            _logger.LogInformation("GetAll Book Action method was invoked");
 
+            IQueryable<Book> query = _db.Books.Include(b => b.Publisher).Include(b => b.BookAuthors).ThenInclude(ba => ba.Author);
 
-            if (books == null || !books.Any())
+            // Apply filters if provided
+            if (!string.IsNullOrEmpty(filterOn) && !string.IsNullOrEmpty(filterQuery))
             {
-                return StatusCode(StatusCodes.Status204NoContent, "No books in database.");
+                switch (filterOn.ToLower())
+                {
+                    case "title":
+                        query = query.Where(b => b.Title.Contains(filterQuery));
+                        break;
+                    case "description":
+                        query = query.Where(b => b.Description.Contains(filterQuery));
+                        break;
+                    
+                    case "author":
+                        query = query.Where(b => b.BookAuthors.Any(ba => ba.Author.FullName.Contains(filterQuery)));
+                        break;
+                    default:
+                        break;
+                }
             }
 
-            var bookDTOs = books.Select(book => new BookAuthorAndPublisher
+            // Apply sorting if provided
+            if (!string.IsNullOrEmpty(sortBy))
+            {
+                switch (sortBy.ToLower())
+                {
+                    case "title":
+                        query = isAscending ? query.OrderBy(b => b.Title) : query.OrderByDescending(b => b.Title);
+                        break;
+                    case "dateadded":
+                        query = isAscending ? query.OrderBy(b => b.DateAdded) : query.OrderByDescending(b => b.DateAdded);
+                        break;
+                    case "id":
+                        query = isAscending ? query.OrderBy(b => b.Id) : query.OrderByDescending(b => b.Id);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            // Paginate the results
+            var paginatedBooks = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
+
+            if (paginatedBooks == null || !paginatedBooks.Any())
+            {
+                return StatusCode(StatusCodes.Status204NoContent, "No books found matching the criteria.");
+            }
+
+            var bookDTOs = paginatedBooks.Select(book => new BookAuthorAndPublisher
             {
                 Id = book.Id,
                 Title = book.Title,
@@ -41,11 +90,12 @@ namespace API_LIBRARY.Controllers
                 CoverUrl = book.CoverUrl,
                 DateAdded = book.DateAdded,
                 PublisherName = book.Publisher.Name,
-                AuthorNames = book.BookAuthors.Select(author => author.Author.FullName).ToList() 
+                AuthorNames = book.BookAuthors.Select(author => author.Author.FullName).ToList()
             }).ToList();
 
             return StatusCode(StatusCodes.Status200OK, bookDTOs);
         }
+
 
 
         [HttpGet("{id}")]
@@ -87,8 +137,10 @@ namespace API_LIBRARY.Controllers
                 Genre = bookDTO.Genre,
                 CoverUrl = bookDTO.CoverUrl,
                 DateAdded = bookDTO.DateAdded,
-                PublisherId = bookDTO.PublisherId
+                PublisherId = bookDTO.PublisherId,
+                
             };
+            book.BookAuthors = bookDTO.AuthorId.Select(authorId => new BookAuthor { AuthorId = authorId }).ToList();
 
             _db.Books.Add(book);
             await _db.SaveChangesAsync();

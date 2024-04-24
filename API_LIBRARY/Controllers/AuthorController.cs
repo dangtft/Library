@@ -1,17 +1,24 @@
-﻿using API_LIBRARY.Models;
+﻿using API_LIBRARY.Data;
+using API_LIBRARY.DTO;
+using API_LIBRARY.Models;
 using API_LIBRARY.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace API_LIBRARY.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class AuthorController : Controller
     {
         private readonly IBookRepository bookRepository;
-        public AuthorController(IBookRepository bookRepository)
+        private readonly LibaryDbContext libraryDbContext;
+        public AuthorController(IBookRepository bookRepository,LibaryDbContext libaryDbContext)
         {
             this.bookRepository = bookRepository;
+            this.libraryDbContext = libaryDbContext;
         }
         [HttpGet("get-all-author")]
         public async Task<IActionResult> GetAuthors()
@@ -26,6 +33,7 @@ namespace API_LIBRARY.Controllers
             return StatusCode(StatusCodes.Status200OK, authors);
         }
 
+        [Authorize("Write,Read")]
         [HttpGet("get-author-by-id/{id}")]
         public async Task<IActionResult> GetAuthor(int id, bool includeBooks = false)
         {
@@ -38,48 +46,69 @@ namespace API_LIBRARY.Controllers
 
             return StatusCode(StatusCodes.Status200OK, author);
         }
-
+        [Authorize("Write,Read")]
         [HttpPost]
-        public async Task<ActionResult<Author>> AddAuthor(Author author)
+        public async Task<ActionResult<Author>> AddAuthor(AuthorDTO authorDTO)
         {
-            var dbAuthor = await bookRepository.AddAuthorAsync(author);
-
-            if (dbAuthor == null)
+            var author = new Author
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, $"{author.FullName} could not be added.");
-            }
+                FullName = authorDTO.FullName
+            };
 
-            return CreatedAtAction("GetAuthor", new { id = author.Id }, author);
+            libraryDbContext.Authors.Add(author);
+            await libraryDbContext.SaveChangesAsync();
+
+            return StatusCode(StatusCodes.Status200OK, "Author added successfully");
         }
-
+        [Authorize("Write,Read")]
         [HttpPut("id")]
-        public async Task<IActionResult> UpdateAuthor(int id, Author author)
+        public async Task<IActionResult> UpdateAuthor(int id,[FromBody] AuthorDTO authorDTO)
         {
-            if (id != author.Id)
+            var author = await libraryDbContext.Authors.FindAsync(id);
+
+            if (author == null)
             {
-                return BadRequest();
+                return NotFound();
             }
 
-            Author dbAuthor = await bookRepository.UpdateAuthorAsync(author);
+            author.FullName = authorDTO.FullName;
 
-            if (dbAuthor == null)
+            libraryDbContext.Entry(author).State = EntityState.Modified;
+
+            try
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, $"{author.FullName} could not be updated");
+                await libraryDbContext.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!AuthorExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
             }
 
-            return NoContent();
+            return StatusCode(StatusCodes.Status200OK);
         }
-
+        private bool AuthorExists(int id)
+        {
+            return libraryDbContext.Authors.Any(e => e.Id == id);
+        }
+        [Authorize("Write,Read")]
         [HttpDelete("id")]
         public async Task<IActionResult> DeleteAuthor(int id)
         {
-            var author = await bookRepository.GetAuthorAsync(id, false);
-            (bool status, string message) = await bookRepository.DeleteAuthorAsync(author);
-
-            if (status == false)
+            var author = await libraryDbContext.Authors.FindAsync(id);
+            if (author == null)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, message);
+                return NotFound();
             }
+
+            libraryDbContext.Remove(author);
+            await libraryDbContext.SaveChangesAsync();
 
             return StatusCode(StatusCodes.Status200OK, author);
         }

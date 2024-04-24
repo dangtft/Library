@@ -4,21 +4,28 @@ using API_LIBRARY.Services;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using API_LIBRARY.Data;
+using API_LIBRARY.DTO;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace API_LIBRARY.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class PublishersController : ControllerBase
     {
         private readonly IBookRepository _bookRepository;
+        private readonly LibaryDbContext libraryDbContext;
 
-        public PublishersController(IBookRepository bookRepository)
+        public PublishersController(IBookRepository bookRepository,LibaryDbContext libaryDbContext)
         {
             _bookRepository = bookRepository;
+            libraryDbContext = libaryDbContext;
         }
 
-        [HttpGet]
+        [HttpGet("get-all-publisher")]
         public async Task<ActionResult<List<Publisher>>> GetPublishers()
         {
             try
@@ -32,7 +39,7 @@ namespace API_LIBRARY.Controllers
             }
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("get-publisher-by-id/{id}")]
         public async Task<ActionResult<Publisher>> GetPublisher(int id, [FromQuery] bool includeBooks = false)
         {
             try
@@ -51,12 +58,19 @@ namespace API_LIBRARY.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<Publisher>> AddPublisher(Publisher publisher)
+        public async Task<ActionResult<Publisher>> AddPublisher(PulisherDTO publisherDTO)
         {
             try
             {
-                var addedPublisher = await _bookRepository.AddPublisherAsync(publisher);
-                return CreatedAtAction(nameof(GetPublisher), new { id = addedPublisher.Id }, addedPublisher);
+                var publisher = new Publisher
+                {
+                    Name = publisherDTO.Name
+                };
+
+                libraryDbContext.Publisher.Add(publisher);
+                await libraryDbContext.SaveChangesAsync();
+
+                return StatusCode(StatusCodes.Status200OK, "Publisher added successfully");
             }
             catch (Exception ex)
             {
@@ -65,27 +79,41 @@ namespace API_LIBRARY.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<Publisher>> UpdatePublisher(int id, Publisher publisher)
+        public async Task<ActionResult<Publisher>> UpdatePublisher(int id, [FromBody] PulisherDTO pulisherDTO)
         {
+            var publisher = await libraryDbContext.Publisher.FindAsync(id);
+
+            if (publisher == null)
+            {
+                return NotFound();
+            }
+
+            publisher.Name= pulisherDTO.Name;
+
+            libraryDbContext.Entry(publisher).State = EntityState.Modified;
+
             try
             {
-                if (id != publisher.Id)
-                {
-                    return BadRequest("Publisher ID mismatch.");
-                }
-
-                var updatedPublisher = await _bookRepository.UpdatePublisherAsync(publisher);
-                if (updatedPublisher == null)
-                {
-                    return NotFound($"Publisher with ID {id} not found.");
-                }
-
-                return Ok(updatedPublisher);
+                await libraryDbContext.SaveChangesAsync();
             }
-            catch (Exception ex)
+            catch (DbUpdateConcurrencyException)
             {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
+                if (!PublisherExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
             }
+
+            return StatusCode(StatusCodes.Status200OK);
+        }
+
+        private bool PublisherExists(int id)
+        {
+            return libraryDbContext.Authors.Any(e => e.Id == id);
         }
 
         [HttpDelete("{id}")]
@@ -93,19 +121,16 @@ namespace API_LIBRARY.Controllers
         {
             try
             {
-                var publisherToDelete = await _bookRepository.GetPublisherAsync(id);
-                if (publisherToDelete == null)
+                var publisher = await libraryDbContext.Publisher.FindAsync(id);
+                if (publisher == null)
                 {
-                    return NotFound($"Publisher with ID {id} not found.");
+                    return NotFound();
                 }
 
-                var result = await _bookRepository.DeletePublisherAsync(publisherToDelete);
-                if (!result.Item1)
-                {
-                    return StatusCode(500, $"Error deleting publisher: {result.Item2}");
-                }
+                libraryDbContext.Remove(publisher);
+                await libraryDbContext.SaveChangesAsync();
 
-                return NoContent();
+                return StatusCode(StatusCodes.Status200OK, publisher);
             }
             catch (Exception ex)
             {
