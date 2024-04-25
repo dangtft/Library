@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using API_LIBRARY.Interfaces;
-using API_LIBRARY.Services;
 using API_LIBRARY.DTO;
 
 namespace API_LIBRARY.Controllers

@@ -1,7 +1,7 @@
 ﻿using API_LIBRARY.Data;
 using API_LIBRARY.DTO;
+using API_LIBRARY.Interfaces;
 using API_LIBRARY.Models;
-using API_LIBRARY.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -33,7 +33,6 @@ namespace API_LIBRARY.Controllers
             return StatusCode(StatusCodes.Status200OK, authors);
         }
 
-        [Authorize("Write,Read")]
         [HttpGet("get-author-by-id/{id}")]
         public async Task<IActionResult> GetAuthor(int id, bool includeBooks = false)
         {
@@ -46,7 +45,7 @@ namespace API_LIBRARY.Controllers
 
             return StatusCode(StatusCodes.Status200OK, author);
         }
-        [Authorize("Write,Read")]
+
         [HttpPost]
         public async Task<ActionResult<Author>> AddAuthor(AuthorDTO authorDTO)
         {
@@ -60,7 +59,7 @@ namespace API_LIBRARY.Controllers
 
             return StatusCode(StatusCodes.Status200OK, "Author added successfully");
         }
-        [Authorize("Write,Read")]
+
         [HttpPut("id")]
         public async Task<IActionResult> UpdateAuthor(int id,[FromBody] AuthorDTO authorDTO)
         {

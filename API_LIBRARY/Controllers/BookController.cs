@@ -1,10 +1,10 @@
 ﻿using API_LIBRARY.Models;
-using API_LIBRARY.Services;
 using Microsoft.AspNetCore.Mvc;
 using API_LIBRARY.DTO;
 using API_LIBRARY.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using API_LIBRARY.Interfaces;
 
 namespace API_LIBRARY.Controllers
 {
@@ -30,68 +30,11 @@ namespace API_LIBRARY.Controllers
         {
             _logger.LogInformation("GetAll Book Action method was invoked");
 
-            IQueryable<Book> query = _db.Books.Include(b => b.Publisher).Include(b => b.BookAuthors).ThenInclude(ba => ba.Author);
-
-            // Apply filters if provided
-            if (!string.IsNullOrEmpty(filterOn) && !string.IsNullOrEmpty(filterQuery))
-            {
-                switch (filterOn.ToLower())
-                {
-                    case "title":
-                        query = query.Where(b => b.Title.Contains(filterQuery));
-                        break;
-                    case "description":
-                        query = query.Where(b => b.Description.Contains(filterQuery));
-                        break;
-                    
-                    case "author":
-                        query = query.Where(b => b.BookAuthors.Any(ba => ba.Author.FullName.Contains(filterQuery)));
-                        break;
-                    default:
-                        break;
-                }
-            }
-
-            // Apply sorting if provided
-            if (!string.IsNullOrEmpty(sortBy))
-            {
-                switch (sortBy.ToLower())
-                {
-                    case "title":
-                        query = isAscending ? query.OrderBy(b => b.Title) : query.OrderByDescending(b => b.Title);
-                        break;
-                    case "dateadded":
-                        query = isAscending ? query.OrderBy(b => b.DateAdded) : query.OrderByDescending(b => b.DateAdded);
-                        break;
-                    case "id":
-                        query = isAscending ? query.OrderBy(b => b.Id) : query.OrderByDescending(b => b.Id);
-                        break;
-                    default:
-                        break;
-                }
-            }
-
-            // Paginate the results
-            var paginatedBooks = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
-
-            if (paginatedBooks == null || !paginatedBooks.Any())
+            var bookDTOs = await _bookRepository.GetBooksAsync(filterOn, filterQuery, sortBy, isAscending, pageNumber, pageSize);
+            if (bookDTOs == null || !bookDTOs.Any())
             {
                 return StatusCode(StatusCodes.Status204NoContent, "No books found matching the criteria.");
             }
-
-            var bookDTOs = paginatedBooks.Select(book => new BookAuthorAndPublisher
-            {
-                Id = book.Id,
-                Title = book.Title,
-                Description = book.Description,
-                isRead = book.isRead,
-                DateRead = book.DateRead,
-                Genre = book.Genre,
-                CoverUrl = book.CoverUrl,
-                DateAdded = book.DateAdded,
-                PublisherName = book.Publisher.Name,
-                AuthorNames = book.BookAuthors.Select(author => author.Author.FullName).ToList()
-            }).ToList();
 
             return StatusCode(StatusCodes.Status200OK, bookDTOs);
         }
@@ -101,26 +44,12 @@ namespace API_LIBRARY.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetBooks(int id)
         {
-            var book = await _db.Books.Include(b => b.Publisher).Include(b => b.BookAuthors).ThenInclude(ba => ba.Author).FirstOrDefaultAsync(b => b.Id == id);
+            var bookDTO = await _bookRepository.GetBookAsync(id);
 
-            if (book == null)
+            if (bookDTO == null)
             {
                 return StatusCode(StatusCodes.Status204NoContent, $"No book found for id: {id}");
             }
-
-            var bookDTO = new BookAuthorAndPublisher
-            {
-                Id = book.Id,
-                Title = book.Title,
-                Description = book.Description,
-                isRead = book.isRead,
-                DateRead = book.DateRead,
-                Genre = book.Genre,
-                CoverUrl = book.CoverUrl,
-                DateAdded = book.DateAdded,
-                PublisherName = book.Publisher.Name,
-                AuthorNames = book.BookAuthors.Select(author => author.Author.FullName).ToList()
-            };
 
             return StatusCode(StatusCodes.Status200OK, bookDTO);
         }
@@ -128,22 +57,12 @@ namespace API_LIBRARY.Controllers
         [HttpPost]
         public async Task<ActionResult<Book>> AddBook(BookDTO bookDTO)
         {
-            var book = new Book
-            {
-                Title = bookDTO.Title,
-                Description = bookDTO.Description,
-                isRead = bookDTO.isRead,
-                DateRead = bookDTO.DateRead,
-                Genre = bookDTO.Genre,
-                CoverUrl = bookDTO.CoverUrl,
-                DateAdded = bookDTO.DateAdded,
-                PublisherId = bookDTO.PublisherId,
-                
-            };
-            book.BookAuthors = bookDTO.AuthorId.Select(authorId => new BookAuthor { AuthorId = authorId }).ToList();
+            var result = await _bookRepository.AddBookAsync(bookDTO);
 
-            _db.Books.Add(book);
-            await _db.SaveChangesAsync();
+            if (result == null)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Failed to add book.");
+            }
 
             return StatusCode(StatusCodes.Status200OK, "Books added successfully");
         }
@@ -151,38 +70,11 @@ namespace API_LIBRARY.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateBook(int id,[FromBody] BookDTO bookDTO)
         {
-            var book = await _db.Books.FindAsync(id);
+            var result = await _bookRepository.UpdateBookAsync(id, bookDTO);
 
-            if (book == null)
+            if (!result)
             {
                 return NotFound();
-            }
-
-            book.Title = bookDTO.Title;
-            book.Description = bookDTO.Description;
-            book.isRead = bookDTO.isRead;
-            book.DateRead = bookDTO.DateRead;
-            book.Genre = bookDTO.Genre;
-            book.CoverUrl = bookDTO.CoverUrl;
-            book.DateAdded = bookDTO.DateAdded;
-            book.PublisherId = bookDTO.PublisherId;
-
-            _db.Entry(book).State = EntityState.Modified;
-
-            try
-            {
-                await _db.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!BookExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
             }
 
             return StatusCode(StatusCodes.Status200OK);
@@ -195,16 +87,14 @@ namespace API_LIBRARY.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBook(int id)
         {
-            var book = await _db.Books.FindAsync(id);
-            if (book == null)
+            var result = await _bookRepository.DeleteBookAsync(id);
+
+            if (!result)
             {
                 return NotFound();
             }
 
-            _db.Books.Remove(book);
-            await _db.SaveChangesAsync();
-
-            return StatusCode(StatusCodes.Status200OK, book);
+            return StatusCode(StatusCodes.Status200OK, "Book deleted successfully");
         }
     }
 }

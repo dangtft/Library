@@ -1,13 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using API_LIBRARY.Models;
-using API_LIBRARY.Services;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using API_LIBRARY.Data;
 using API_LIBRARY.DTO;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using API_LIBRARY.Interfaces;
 
 namespace API_LIBRARY.Controllers
 {

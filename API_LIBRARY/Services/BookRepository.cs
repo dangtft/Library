@@ -1,4 +1,6 @@
 ﻿using API_LIBRARY.Data;
+using API_LIBRARY.DTO;
+using API_LIBRARY.Interfaces;
 using API_LIBRARY.Models;
 using Microsoft.EntityFrameworkCore;
 namespace API_LIBRARY.Services
@@ -13,78 +15,184 @@ namespace API_LIBRARY.Services
 
         #region Books
 
-        public async Task<List<Book>> GetBooksAsync()
+        public async Task<List<BookAuthorAndPublisher>> GetBooksAsync(string? filterOn, string? filterQuery,
+                              string? sortBy, bool isAscending,
+                              int pageNumber = 1, int pageSize = 100)
         {
             try
             {
-                return await _db.Books.ToListAsync();
+                IQueryable<Book> query = _db.Books.Include(b => b.Publisher).Include(b => b.BookAuthors).ThenInclude(ba => ba.Author);
+
+                // Apply filters if provided
+                if (!string.IsNullOrEmpty(filterOn) && !string.IsNullOrEmpty(filterQuery))
+                {
+                    switch (filterOn.ToLower())
+                    {
+                        case "title":
+                            query = query.Where(b => b.Title.Contains(filterQuery));
+                            break;
+                        case "description":
+                            query = query.Where(b => b.Description.Contains(filterQuery));
+                            break;
+                        case "author":
+                            query = query.Where(b => b.BookAuthors.Any(ba => ba.Author.FullName.Contains(filterQuery)));
+                            break;
+                        default:
+                            break;
+                    }
+                }
+
+                // Apply sorting if provided
+                if (!string.IsNullOrEmpty(sortBy))
+                {
+                    switch (sortBy.ToLower())
+                    {
+                        case "title":
+                            query = isAscending ? query.OrderBy(b => b.Title) : query.OrderByDescending(b => b.Title);
+                            break;
+                        case "dateadded":
+                            query = isAscending ? query.OrderBy(b => b.DateAdded) : query.OrderByDescending(b => b.DateAdded);
+                            break;
+                        case "id":
+                            query = isAscending ? query.OrderBy(b => b.Id) : query.OrderByDescending(b => b.Id);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+
+                // Paginate the results
+                var paginatedBooks = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
+
+                return paginatedBooks.Select(book => new BookAuthorAndPublisher
+                {
+                    Id = book.Id,
+                    Title = book.Title,
+                    Description = book.Description,
+                    isRead = book.isRead,
+                    DateRead = book.DateRead,
+                    Genre = book.Genre,
+                    CoverUrl = book.CoverUrl,
+                    DateAdded = book.DateAdded,
+                    PublisherName = book.Publisher.Name,
+                    AuthorNames = book.BookAuthors.Select(author => author.Author.FullName).ToList()
+                }).ToList();
             }
             catch (Exception ex)
             {
+                // Log or handle the exception appropriately
                 return null;
             }
         }
 
-        public async Task<Book> GetBookAsync(int id)
+        public async Task<BookAuthorAndPublisher> GetBookAsync(int id)
         {
             try
             {
-                return await _db.Books.FindAsync(id);
+                var book = await _db.Books.Include(b => b.Publisher).Include(b => b.BookAuthors).ThenInclude(ba => ba.Author)
+                                           .FirstOrDefaultAsync(b => b.Id == id);
+
+                if (book == null)
+                    return null;
+
+                return new BookAuthorAndPublisher
+                {
+                    Id = book.Id,
+                    Title = book.Title,
+                    Description = book.Description,
+                    isRead = book.isRead,
+                    DateRead = book.DateRead,
+                    Genre = book.Genre,
+                    CoverUrl = book.CoverUrl,
+                    DateAdded = book.DateAdded,
+                    PublisherName = book.Publisher.Name,
+                    AuthorNames = book.BookAuthors.Select(author => author.Author.FullName).ToList()
+                };
             }
             catch (Exception ex)
             {
+                // Log or handle the exception appropriately
                 return null;
             }
         }
 
-        public async Task<Book> AddBookAsync(Book book)
+        public async Task<bool> AddBookAsync(BookDTO bookDTO)
         {
             try
             {
-                await _db.Books.AddAsync(book);
+                var book = new Book
+                {
+                    Title = bookDTO.Title,
+                    Description = bookDTO.Description,
+                    isRead = bookDTO.isRead,
+                    DateRead = bookDTO.DateRead,
+                    Genre = bookDTO.Genre,
+                    CoverUrl = bookDTO.CoverUrl,
+                    DateAdded = bookDTO.DateAdded,
+                    PublisherId = bookDTO.PublisherId
+                };
+                book.BookAuthors = bookDTO.AuthorId.Select(authorId => new BookAuthor { AuthorId = authorId }).ToList();
+
+                _db.Books.Add(book);
                 await _db.SaveChangesAsync();
-                return await _db.Books.FindAsync(book.Id); // Auto ID from DB
+
+                return true;
             }
             catch (Exception ex)
             {
-                return null; // An error occured
+                // Log or handle the exception appropriately
+                return false;
             }
         }
 
-        public async Task<Book> UpdateBookAsync(Book book)
+        public async Task<bool> UpdateBookAsync(int id, BookDTO bookDTO)
         {
             try
             {
+                var book = await _db.Books.FindAsync(id);
+
+                if (book == null)
+                    return false;
+
+                book.Title = bookDTO.Title;
+                book.Description = bookDTO.Description;
+                book.isRead = bookDTO.isRead;
+                book.DateRead = bookDTO.DateRead;
+                book.Genre = bookDTO.Genre;
+                book.CoverUrl = bookDTO.CoverUrl;
+                book.DateAdded = bookDTO.DateAdded;
+                book.PublisherId = bookDTO.PublisherId;
+
                 _db.Entry(book).State = EntityState.Modified;
                 await _db.SaveChangesAsync();
 
-                return book;
+                return true;
             }
             catch (Exception ex)
             {
-                return null;
+                // Log or handle the exception appropriately
+                return false;
             }
         }
 
-        public async Task<(bool, string)> DeleteBookAsync(Book book)
+        public async Task<bool> DeleteBookAsync(int id)
         {
             try
             {
-                var dbBook = await _db.Books.FindAsync(book.Id);
+                var book = await _db.Books.FindAsync(id);
 
-                if (dbBook == null)
-                {
-                    return (false, "Book could not be found.");
-                }
+                if (book == null)
+                    return false;
 
                 _db.Books.Remove(book);
                 await _db.SaveChangesAsync();
 
-                return (true, "Book got deleted.");
+                return true;
             }
             catch (Exception ex)
             {
-                return (false, $"An error occured. Error Message: {ex.Message}");
+                // Log or handle the exception appropriately
+                return false;
             }
         }
 
@@ -121,25 +229,16 @@ namespace API_LIBRARY.Services
             }
         }
 
-        public async Task<Author> AddAuthorAsync(Author author)
+        public async Task<Author> AddAuthorAsync(AuthorDTO authorDTO)
         {
             try
             {
-                await _db.Authors.AddAsync(author);
-                await _db.SaveChangesAsync();
-                return await _db.Authors.FindAsync(author.Id); // Auto ID from DB
-            }
-            catch (Exception ex)
-            {
-                return null;
-            }
-        }
+                var author = new Author
+                {
+                    FullName = authorDTO.FullName
+                };
 
-        public async Task<Author> UpdateAuthorAsync(Author author)
-        {
-            try
-            {
-                _db.Entry(author).State = EntityState.Modified;
+                _db.Authors.Add(author);
                 await _db.SaveChangesAsync();
 
                 return author;
@@ -150,25 +249,45 @@ namespace API_LIBRARY.Services
             }
         }
 
-        public async Task<(bool, string)> DeleteAuthorAsync(Author author)
+        public async Task<bool> UpdateAuthorAsync(int id, AuthorDTO authorDTO)
         {
             try
             {
-                var dbAuthor = await _db.Authors.FindAsync(author.Id);
+                var author = await _db.Authors.FindAsync(id);
 
-                if (dbAuthor == null)
-                {
-                    return (false, "Author could not be found");
-                }
+                if (author == null)
+                    return false;
+
+                author.FullName = authorDTO.FullName;
+
+                _db.Entry(author).State = EntityState.Modified;
+                await _db.SaveChangesAsync();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> DeleteAuthorAsync(int id)
+        {
+            try
+            {
+                var author = await _db.Authors.FindAsync(id);
+
+                if (author == null)
+                    return false;
 
                 _db.Authors.Remove(author);
                 await _db.SaveChangesAsync();
 
-                return (true, "Author got deleted.");
+                return true;
             }
             catch (Exception ex)
             {
-                return (false, $"An error occured. Error Message: {ex.Message}");
+                return false;
             }
         }
         #endregion Author
@@ -189,31 +308,67 @@ namespace API_LIBRARY.Services
             return await query.FirstOrDefaultAsync(p => p.Id == id);
         }
 
-        public async Task<Publisher> AddPublisherAsync(Publisher publisher)
-        {
-            _db.Publisher.Add(publisher);
-            await _db.SaveChangesAsync();
-            return publisher;
-        }
-
-        public async Task<Publisher> UpdatePublisherAsync(Publisher publisher)
-        {
-            _db.Entry(publisher).State = EntityState.Modified;
-            await _db.SaveChangesAsync();
-            return publisher;
-        }
-
-        public async Task<(bool, string)> DeletePublisherAsync(Publisher publisher)
+        public async Task<Publisher> AddPublisherAsync(PulisherDTO publisherDTO)
         {
             try
             {
-                _db.Publisher.Remove(publisher);
+                var publisher = new Publisher
+                {
+                    Name = publisherDTO.Name
+                };
+
+                _db.Publisher.Add(publisher);
                 await _db.SaveChangesAsync();
-                return (true, "Publisher deleted successfully.");
+
+                return publisher;
             }
             catch (Exception ex)
             {
-                return (false, $"Error deleting publisher: {ex.Message}");
+                return null;
+            }
+        }
+
+
+        public async Task<bool> UpdatePublisherAsync(int id, PulisherDTO publisherDTO)
+        {
+            try
+            {
+                var publisher = await _db.Publisher.FindAsync(id);
+
+                if (publisher == null)
+                    return false;
+
+                publisher.Name = publisherDTO.Name;
+
+                _db.Entry(publisher).State = EntityState.Modified;
+                await _db.SaveChangesAsync();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> DeletePublisherAsync(int id)
+        {
+            try
+            {
+                var publisher = await _db.Publisher.FindAsync(id);
+
+                if (publisher == null)
+                    return false;
+
+                _db.Publisher.Remove(publisher);
+                await _db.SaveChangesAsync();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // Log or handle the exception appropriately
+                return false;
             }
         }
 
