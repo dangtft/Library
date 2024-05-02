@@ -9,7 +9,7 @@ using API_LIBRARY.Interfaces;
 namespace API_LIBRARY.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/[controller]/[action]")]
     //[Authorize]
     public class BookController : ControllerBase
     {
@@ -79,10 +79,7 @@ namespace API_LIBRARY.Controllers
 
             return StatusCode(StatusCodes.Status200OK);
         }
-        private bool BookExists(int id)
-        {
-            return _db.Books.Any(e => e.Id == id);
-        }
+       
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBook(int id)
