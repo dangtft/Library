@@ -22,7 +22,7 @@ namespace API_LIBRARY.Interfaces
 
         Task<Author> GetAuthorAsync(int id, bool includeBooks = false);
 
-        Task<Author> AddAuthorAsync(AuthorDTO authorDTO);
+        Task<Author> AddAuthorAsync(AddAuthor authorDTO);
 
         Task<bool> UpdateAuthorAsync(int id, AuthorDTO authorDTO);
 

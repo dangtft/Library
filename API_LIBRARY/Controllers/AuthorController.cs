@@ -2,6 +2,7 @@
 using API_LIBRARY.DTO;
 using API_LIBRARY.Interfaces;
 using API_LIBRARY.Models;
+using API_LIBRARY.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +11,7 @@ namespace API_LIBRARY.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    //[Authorize]
     public class AuthorController : Controller
     {
         private readonly IBookRepository bookRepository;
@@ -25,12 +26,19 @@ namespace API_LIBRARY.Controllers
         {
             var authors = await bookRepository.GetAuthorsAsync();
 
-            if (authors == null)
+            if (authors == null || !authors.Any())
             {
-                return StatusCode(StatusCodes.Status204NoContent, "No authors in database");
+                return NoContent();
             }
 
-            return StatusCode(StatusCodes.Status200OK, authors);
+            var authorDTOs = authors.Select(author => new
+            {
+                Id = author.Id,
+                FullName = author.FullName,
+                NameBook = author.BookAuthors.Select(ba => ba.Book.Title).ToList()             
+            }).ToList();
+            return Ok(authorDTOs);
+
         }
 
         [HttpGet("get-author-by-id/{id}")]
@@ -47,17 +55,16 @@ namespace API_LIBRARY.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<Author>> AddAuthor(AuthorDTO authorDTO)
+        public async Task<ActionResult<Author>> AddAuthor(AddAuthor authorDTO)
         {
-            var author = new Author
+            var result = await bookRepository.AddAuthorAsync(authorDTO);
+
+            if (result == null)
             {
-                FullName = authorDTO.FullName
-            };
+                return StatusCode(StatusCodes.Status500InternalServerError, "Failed to add author.");
+            }
 
-            libraryDbContext.Authors.Add(author);
-            await libraryDbContext.SaveChangesAsync();
-
-            return StatusCode(StatusCodes.Status200OK, "Author added successfully");
+            return StatusCode(StatusCodes.Status200OK, "Authors added successfully");
         }
 
         [HttpPut("id")]
@@ -96,7 +103,7 @@ namespace API_LIBRARY.Controllers
         {
             return libraryDbContext.Authors.Any(e => e.Id == id);
         }
-        [Authorize("Write,Read")]
+       // [Authorize("Write,Read")]
         [HttpDelete("id")]
         public async Task<IActionResult> DeleteAuthor(int id)
         {

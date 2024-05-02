@@ -2,6 +2,7 @@
 using API_LIBRARY.DTO;
 using API_LIBRARY.Interfaces;
 using API_LIBRARY.Models;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 namespace API_LIBRARY.Services
 {
@@ -202,14 +203,9 @@ namespace API_LIBRARY.Services
 
         public async Task<List<Author>> GetAuthorsAsync()
         {
-            try
-            {
-                return await _db.Authors.ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                return null;
-            }
+            var authors = await _db.Authors.Include(a => a.BookAuthors).ThenInclude(ba => ba.Book).ToListAsync();
+
+            return authors;
         }
 
         public async Task<Author> GetAuthorAsync(int id, bool includeBooks)
@@ -229,15 +225,16 @@ namespace API_LIBRARY.Services
             }
         }
 
-        public async Task<Author> AddAuthorAsync(AuthorDTO authorDTO)
+        public async Task<Author> AddAuthorAsync(AddAuthor authorDTO)
         {
             try
             {
                 var author = new Author
                 {
                     FullName = authorDTO.FullName
-                };
 
+                };
+                author.BookAuthors = authorDTO.BookId.Select(bookid => new BookAuthor { BookId = bookid }).ToList();
                 _db.Authors.Add(author);
                 await _db.SaveChangesAsync();
 
