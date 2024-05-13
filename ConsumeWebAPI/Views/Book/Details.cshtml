@@ -1,0 +1,45 @@
+﻿@model ConsumeWebAPI.Models.BookViewModel
+
+<h1>Detail Book</h1>
+
+<div>
+    <label>Title:</label>
+    <span>@Model.Title</span>
+</div>
+<div>
+    <label>Description:</label>
+    <span>@Model.Description</span>
+</div>
+<div>
+    <label>isRead:</label>
+    <span>@Model.isRead</span>
+</div>
+<div>
+    <label>Date Read:</label>
+    <span>@Model.DateRead</span>
+</div>
+<div>
+    <label>Genre:</label>
+    <span>@Model.Genre</span>
+</div>
+<div>
+    <label>Cover URL:</label>
+    <span>@Model.CoverUrl</span>
+</div>
+<div>
+    <label>Date Added:</label>
+    <span>@Model.DateAdded</span>
+</div>
+<div>
+    <label>Publisher:</label>
+    <span>@Model.PublisherName</span>
+</div>
+<div>
+    <label>Authors:</label>
+    <ul>
+        @foreach (var authorName in Model.AuthorNames)
+        {
+            <li>@authorName</li>
+        }
+    </ul>
+</div>

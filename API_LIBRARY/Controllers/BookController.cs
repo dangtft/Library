@@ -42,7 +42,7 @@ namespace API_LIBRARY.Controllers
 
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetBooks(int id)
+        public async Task<IActionResult> GetBook(int id)
         {
             var bookDTO = await _bookRepository.GetBookAsync(id);
 

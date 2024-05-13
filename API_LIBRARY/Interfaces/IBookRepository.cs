@@ -5,8 +5,8 @@ namespace API_LIBRARY.Interfaces
 {
     public interface IBookRepository
     {
-        Task<List<BookAuthorAndPublisher>> GetBooksAsync(string? filterOn, string? filterQuery,
-            string? sortBy, bool isAscending, int pageNumber = 1, int pageSize = 100);
+        Task<List<BookAuthorAndPublisher>> GetBooksAsync(string? filterOn = null, string? filterQuery=null,
+            string? sortBy = null, bool isAscending= true, int pageNumber = 1, int pageSize = 100);
 
         Task<BookAuthorAndPublisher> GetBookAsync(int id);
 

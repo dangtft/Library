@@ -16,68 +16,50 @@ namespace API_LIBRARY.Services
 
         #region Books
 
-        public async Task<List<BookAuthorAndPublisher>> GetBooksAsync(string? filterOn, string? filterQuery,
-                              string? sortBy, bool isAscending,
+        public async Task<List<BookAuthorAndPublisher>> GetBooksAsync(string? filterOn=null, string? filterQuery=null,
+                              string? sortBy = null, bool isAscending = true,
                               int pageNumber = 1, int pageSize = 100)
         {
             try
             {
                 IQueryable<Book> query = _db.Books.Include(b => b.Publisher).Include(b => b.BookAuthors).ThenInclude(ba => ba.Author);
 
-                // Apply filters if provided
-                if (!string.IsNullOrEmpty(filterOn) && !string.IsNullOrEmpty(filterQuery))
+                var allBooks = _db.Books.Select(Books => new BookAuthorAndPublisher()
                 {
-                    switch (filterOn.ToLower())
+                    Id = Books.Id,
+                    Title = Books.Title,
+                    Description = Books.Description,
+                    isRead = Books.isRead,
+                    DateRead = (bool)Books.isRead ? Books.DateRead.Value : null,                 
+                    Genre = Books.Genre,
+                    CoverUrl = Books.CoverUrl,
+                    PublisherName = Books.Publisher.Name,
+                    AuthorNames = Books.BookAuthors.Select(n => n.Author.FullName).ToList()
+                }).AsQueryable();
+
+                //filtering
+                if (string.IsNullOrWhiteSpace(filterOn) == false && string.IsNullOrWhiteSpace(filterQuery) == false)
+                {
+                    if (filterOn.Equals("title", StringComparison.OrdinalIgnoreCase))
                     {
-                        case "title":
-                            query = query.Where(b => b.Title.Contains(filterQuery));
-                            break;
-                        case "description":
-                            query = query.Where(b => b.Description.Contains(filterQuery));
-                            break;
-                        case "author":
-                            query = query.Where(b => b.BookAuthors.Any(ba => ba.Author.FullName.Contains(filterQuery)));
-                            break;
-                        default:
-                            break;
+                        allBooks = allBooks.Where(x => x.Title.Contains(filterQuery));
                     }
                 }
 
-                // Apply sorting if provided
-                if (!string.IsNullOrEmpty(sortBy))
+
+                //sorting
+                if (string.IsNullOrWhiteSpace(sortBy) == false)
                 {
-                    switch (sortBy.ToLower())
+                    if (sortBy.Equals("title", StringComparison.OrdinalIgnoreCase))
                     {
-                        case "title":
-                            query = isAscending ? query.OrderBy(b => b.Title) : query.OrderByDescending(b => b.Title);
-                            break;
-                        case "dateadded":
-                            query = isAscending ? query.OrderBy(b => b.DateAdded) : query.OrderByDescending(b => b.DateAdded);
-                            break;
-                        case "id":
-                            query = isAscending ? query.OrderBy(b => b.Id) : query.OrderByDescending(b => b.Id);
-                            break;
-                        default:
-                            break;
+                        allBooks = isAscending ? allBooks.OrderBy(x => x.Title) :
+                       allBooks.OrderByDescending(x => x.Title);
                     }
                 }
 
-                // Paginate the results
-                var paginatedBooks = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
-
-                return paginatedBooks.Select(book => new BookAuthorAndPublisher
-                {
-                    Id = book.Id,
-                    Title = book.Title,
-                    Description = book.Description,
-                    isRead = book.isRead,
-                    DateRead = book.DateRead,
-                    Genre = book.Genre,
-                    CoverUrl = book.CoverUrl,
-                    DateAdded = book.DateAdded,
-                    PublisherName = book.Publisher.Name,
-                    AuthorNames = book.BookAuthors.Select(author => author.Author.FullName).ToList()
-                }).ToList();
+                //pagination
+                var skipResults = (pageNumber - 1) * pageSize;
+                return allBooks.Skip(skipResults).Take(pageSize).ToList();
             }
             catch (Exception ex)
             {
