@@ -1,23 +1,41 @@
-﻿using ConsumeWebAPI.Models;
+﻿using ConsumeWebAPI.Interfaces;
+using ConsumeWebAPI.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using System.Text;
 
 namespace ConsumeWebAPI.Controllers
 {
+
     public class BookController : Controller
     {
         private readonly HttpClient _httpClient;
+        private readonly IApiService _apiService;
 
-        public BookController(IHttpClientFactory httpClientFactory)
+        public BookController(IHttpClientFactory httpClientFactory,IApiService apiService)
         {
             _httpClient = httpClientFactory.CreateClient();
             _httpClient.BaseAddress = new Uri("https://localhost:7112/api/");
+            _apiService = apiService;
         }
-        [HttpGet]
-        public async Task<IActionResult> Index()
+        private void SetAuthorizationHeader()
         {
+            var token = HttpContext.Session.GetString("JWToken");
+            if (!string.IsNullOrEmpty(token))
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Index([FromQuery] string? filterOn=null,  string? filterQuery = null,
+                                string? sortBy=null,  bool isAscending=true)
+        {
+            SetAuthorizationHeader();
+
             List<BookViewModel> books = new List<BookViewModel>();
-            HttpResponseMessage response = await _httpClient.GetAsync("Book/GetBooks/get-all-book");
+            HttpResponseMessage response = await _httpClient.GetAsync($"Book/GetBooks/get-all-book?filterOn={filterOn}&filterQuery={filterQuery}&sortBy={sortBy}&isAscending={isAscending}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -30,6 +48,8 @@ namespace ConsumeWebAPI.Controllers
         [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
+            SetAuthorizationHeader();
+
             HttpResponseMessage response = await _httpClient.GetAsync($"Book/GetBook/{id}");
 
             if (response.IsSuccessStatusCode)
@@ -58,12 +78,14 @@ namespace ConsumeWebAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(BookViewModel book)
         {
-            var content = new StringContent(JsonConvert.SerializeObject(book), System.Text.Encoding.UTF8, "application/json");
+            SetAuthorizationHeader();
+
+            var content = new StringContent(JsonConvert.SerializeObject(book), Encoding.UTF8, "application/json");
             HttpResponseMessage response = await _httpClient.PostAsync("Book/AddBook", content);
 
             if (response.IsSuccessStatusCode)
             {
-                return RedirectToAction("Index","Book");
+                return RedirectToAction("Index", "Book");
             }
             else
             {
@@ -75,6 +97,8 @@ namespace ConsumeWebAPI.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
+            SetAuthorizationHeader();
+
             HttpResponseMessage response = await _httpClient.GetAsync($"Book/GetBook/{id}");
 
             if (response.IsSuccessStatusCode)
@@ -92,7 +116,9 @@ namespace ConsumeWebAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> Edit(int id, BookViewModel book)
         {
-            var content = new StringContent(JsonConvert.SerializeObject(book), System.Text.Encoding.UTF8, "application/json");
+            SetAuthorizationHeader();
+
+            var content = new StringContent(JsonConvert.SerializeObject(book), Encoding.UTF8, "application/json");
             HttpResponseMessage response = await _httpClient.PutAsync($"Book/UpdateBook/{id}", content);
 
             if (response.IsSuccessStatusCode)
@@ -112,6 +138,8 @@ namespace ConsumeWebAPI.Controllers
         [HttpGet]
         public async Task<IActionResult> Delete(int id)
         {
+            SetAuthorizationHeader();
+
             HttpResponseMessage response = await _httpClient.DeleteAsync($"Book/DeleteBook/{id}");
 
             if (response.IsSuccessStatusCode)

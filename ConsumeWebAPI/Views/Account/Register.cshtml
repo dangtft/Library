@@ -1,0 +1,20 @@
+﻿@model ConsumeWebAPI.DTOs.RegisterRequestDTO
+
+<form asp-action="Register" method="post">
+    <div>
+        <label>Username</label>
+        <input asp-for="Username" />
+        <span asp-validation-for="Username" class="text-danger"></span>
+    </div>
+    <div>
+        <label>Password</label>
+        <input asp-for="Password" type="password" />
+        <span asp-validation-for="Password" class="text-danger"></span>
+    </div>
+    <div>
+        <label>Roles (comma separated)</label>
+        <input asp-for="Roles" />
+        <span asp-validation-for="Roles" class="text-danger"></span>
+    </div>
+    <button type="submit">Register</button>
+</form>

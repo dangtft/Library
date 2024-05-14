@@ -10,7 +10,7 @@ namespace API_LIBRARY.Controllers
 {
     [ApiController]
     [Route("api/[controller]/[action]")]
-    //[Authorize]
+    [Authorize]
     public class BookController : ControllerBase
     {
         private LibaryDbContext _db;
@@ -22,7 +22,7 @@ namespace API_LIBRARY.Controllers
             _db = libaryDbContext;
             _logger = logger;
         }
-
+        [Authorize(Roles ="Read,Write")]
         [HttpGet("get-all-book")]
         public async Task<IActionResult> GetBooks([FromQuery] string? filterOn, [FromQuery] string? filterQuery,
                                [FromQuery] string? sortBy, [FromQuery] bool isAscending,

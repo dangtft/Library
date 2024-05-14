@@ -13,11 +13,12 @@
 </p>
 
 <!-- Form for filtering and pagination -->
-<form id="filterForm">
+<form asp-controller="Book" asp-action="Index" method="get">
     <label for="filterOn">Filter On:</label>
     <select id="filterOn" name="filterOn">
         <option value="title">Title</option>
-        <!-- Add other options as needed -->
+       
+        
     </select>
     <label for="filterQuery">Filter Query:</label>
     <input type="text" id="filterQuery" name="filterQuery">
@@ -25,8 +26,11 @@
     <select id="sortBy" name="sortBy">
         <option value="title">Title</option>
     </select>
-    <label for="isAscending">Ascending:</label>
-    <input type="checkbox" id="isAscending" name="isAscending">
+    <label for="isAscending">Tang dan:</label>
+    <input type="radio" id="isAscending" name="isAscending" value="True"/>
+    <label for="isAscending">Giam dan:</label>
+    <input type="radio" id="isAscending" name="isAscending" value="False"/>
+
     <button type="submit" id="applyFiltersBtn">Apply Filters</button>
 </form>
 
@@ -118,71 +122,7 @@
     </tbody>
 </table>
 
-<script>
-    $(document).ready(function () {
-        $('#applyFiltersBtn').click(function (e) {
-            e.preventDefault();
-            var filterOn = $('#filterOn').val();
-            var filterQuery = $('#filterQuery').val();
-            var sortBy = $('#sortBy').val();
-            var isAscending = $('#isAscending').is(':checked');
 
-            // Gửi yêu cầu lọc và sắp xếp dữ liệu
-            $.ajax({
-                url: '/Book/GetBooks/get-all-book',
-                type: 'GET',
-                data: {
-                    filterOn: filterOn,
-                    filterQuery: filterQuery,
-                    sortBy: sortBy,
-                    isAscending: isAscending
-                },
-                success: function (data) {
-                    // Xóa dữ liệu cũ trong bảng
-                    $('#dataTable tbody').empty();
-
-                    // Duyệt qua mỗi phần tử trong dữ liệu mới nhận được và thêm chúng vào bảng
-                    data.forEach(function (item) {
-                        var row = $('<tr></tr>'); // Tạo một hàng mới
-
-                        // Thêm các cột dữ liệu vào hàng mới
-                        row.append($('<td></td>').text(item.Id));
-                        row.append($('<td></td>').text(item.Title));
-                        row.append($('<td></td>').text(item.Description));
-                        row.append($('<td></td>').text(item.isRead));
-                        row.append($('<td></td>').text(item.DateRead));
-                        row.append($('<td></td>').text(item.Genre));
-                        row.append($('<td></td>').text(item.CoverUrl));
-                        row.append($('<td></td>').text(item.DateAdded));
-                        row.append($('<td></td>').text(item.PublisherName));
-
-                        // Tạo một danh sách để hiển thị tất cả tác giả của cuốn sách
-                        var authorsList = $('<ul></ul>');
-                        item.AuthorNames.forEach(function (authorName) {
-                            authorsList.append($('<li></li>').text(authorName));
-                        });
-                        var authorsCell = $('<td></td>').append(authorsList);
-                        row.append(authorsCell);
-
-                        // Thêm các nút chỉnh sửa và xóa
-                        var actionCell = $('<td></td>');
-                        var editLink = $('<a></a>').attr('href', '/Book/Edit/' + item.Id).text('Edit');
-                        var detailsLink = $('<a></a>').attr('href', '/Book/Details/' + item.Id).text('Details');
-                        var deleteLink = $('<a></a>').attr('href', '/Book/Delete/' + item.Id).text('Delete');
-                        actionCell.append(editLink).append(' | ').append(detailsLink).append(' | ').append(deleteLink);
-                        row.append(actionCell);
-
-                        // Thêm hàng mới vào bảng
-                        $('#dataTable tbody').append(row);
-                    });
-                },
-                error: function (xhr, textStatus, errorThrown) {
-                    console.log('Error:', errorThrown);
-                }
-            });
-        });
-    });
-</script>
 
 
 

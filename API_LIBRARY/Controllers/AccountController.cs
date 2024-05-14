@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
 using API_LIBRARY.Interfaces;
 using API_LIBRARY.DTO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace API_LIBRARY.Controllers
 {
@@ -13,8 +14,8 @@ namespace API_LIBRARY.Controllers
         private readonly UserManager<IdentityUser> _userManager;
         private readonly ITokenRepository _tokenRepository;
         private readonly IBookRepository _bookRepository;
-        
-        public AccountController(IBookRepository bookRepository,ITokenRepository tokenRepository,UserManager<IdentityUser> userManager)
+
+        public AccountController(IBookRepository bookRepository, ITokenRepository tokenRepository, UserManager<IdentityUser> userManager)
         {
             _userManager = userManager;
             _tokenRepository = tokenRepository;
@@ -25,54 +26,63 @@ namespace API_LIBRARY.Controllers
         [Route("Register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDTO registerRequestDTO)
         {
+            if (registerRequestDTO == null || !ModelState.IsValid)
+            {
+                return BadRequest("Invalid registration request.");
+            }
+
             var identityUser = new IdentityUser
             {
                 UserName = registerRequestDTO.Username,
                 Email = registerRequestDTO.Username
             };
+
             var identityResult = await _userManager.CreateAsync(identityUser, registerRequestDTO.Password);
             if (identityResult.Succeeded)
             {
-                //add roles to this user
                 if (registerRequestDTO.Roles != null && registerRequestDTO.Roles.Any())
                 {
-                    identityResult = await _userManager.AddToRolesAsync(identityUser, registerRequestDTO.Roles);
+                    var rolesResult = await _userManager.AddToRolesAsync(identityUser, registerRequestDTO.Roles);
+                    if (!rolesResult.Succeeded)
+                    {
+                        return BadRequest("Failed to add roles to the user.");
+                    }
                 }
-                if (identityResult.Succeeded)
-                {
-                    return Ok("Register Successful! Let login!");
-                }
+                return Ok("Registration successful! Please login.");
             }
-            return BadRequest("Something wrong!");
+
+            var errors = identityResult.Errors.Select(e => e.Description);
+            return BadRequest(new { Errors = errors });
         }
 
         [HttpPost]
         [Route("Login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDTO loginRequestDTO)
         {
+            if (loginRequestDTO == null || !ModelState.IsValid)
+            {
+                return BadRequest("Invalid login request.");
+            }
+
             var user = await _userManager.FindByEmailAsync(loginRequestDTO.Username);
             if (user != null)
             {
-                var checkPasswordResult = await
-                _userManager.CheckPasswordAsync(user, loginRequestDTO.Password);
+                var checkPasswordResult = await _userManager.CheckPasswordAsync(user, loginRequestDTO.Password);
                 if (checkPasswordResult)
-                { //get roles for this user
+                {
                     var roles = await _userManager.GetRolesAsync(user);
-                    if (roles != null)
-                    { //create token
-                        var jwtToken = _tokenRepository.CreateJWTToken(user, roles.ToList());
-                        var response = new LoginResponseDTO
-                        {
-                            JwtToken = jwtToken
-                        };
-                        return Ok(response);
-                    }
+                    var jwtToken = _tokenRepository.CreateJWTToken(user, roles.ToList());
+
+                    var response = new LoginResponseDTO
+                    {
+                        JwtToken = jwtToken
+                    };
+
+                    return Ok(response);
                 }
             }
-            return BadRequest("Username or password incorrect");
 
+            return Unauthorized("Username or password incorrect.");
         }
-
-
     }
 }

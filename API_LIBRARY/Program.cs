@@ -96,7 +96,7 @@ builder.Services.AddDbContext<LibaryDbContext>(options =>
 builder.Services.AddDbContext<BookAuthorDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("BookAuthConnection")));
 builder.Services.AddHttpContextAccessor();
-
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
