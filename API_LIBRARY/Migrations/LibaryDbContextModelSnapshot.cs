@@ -94,8 +94,8 @@ namespace API_LIBRARY.Migrations
                         {
                             Id = 1,
                             CoverUrl = "https://example.com/book1cover",
-                            DateAdded = new DateTime(2024, 4, 16, 10, 5, 15, 833, DateTimeKind.Local).AddTicks(6675),
-                            DateRead = new DateTime(2024, 4, 16, 10, 5, 15, 833, DateTimeKind.Local).AddTicks(6652),
+                            DateAdded = new DateTime(2024, 5, 15, 10, 16, 23, 881, DateTimeKind.Local).AddTicks(1457),
+                            DateRead = new DateTime(2024, 5, 15, 10, 16, 23, 881, DateTimeKind.Local).AddTicks(1370),
                             Description = "Description of Book 1",
                             Genre = 1,
                             PublisherId = 1,
@@ -106,7 +106,7 @@ namespace API_LIBRARY.Migrations
                         {
                             Id = 2,
                             CoverUrl = "https://example.com/book2cover",
-                            DateAdded = new DateTime(2024, 4, 16, 10, 5, 15, 833, DateTimeKind.Local).AddTicks(6681),
+                            DateAdded = new DateTime(2024, 5, 15, 10, 16, 23, 881, DateTimeKind.Local).AddTicks(1463),
                             Description = "Description of Book 2",
                             Genre = 1,
                             PublisherId = 2,
@@ -150,6 +150,36 @@ namespace API_LIBRARY.Migrations
                             AuthorId = 2,
                             BookId = 2
                         });
+                });
+
+            modelBuilder.Entity("API_LIBRARY.Models.Image", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("FileDescription")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FileExtension")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("FileSizeInBytes")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Images");
                 });
 
             modelBuilder.Entity("API_LIBRARY.Models.Publisher", b =>

@@ -1,0 +1,18 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+    <h1>Welcome to the Image Manager!</h1>
+    @if (TempData["UploadSuccess"] != null)
+    {
+        <div class="alert alert-success" role="alert">
+            @TempData["UploadSuccess"]
+        </div>
+    }
+    <p>What would you like to do?</p>
+    <div class="btn-group" role="group" aria-label="Image Actions">
+        <a asp-controller="Image" asp-action="Upload" class="btn btn-primary">Upload Image</a>
+        <a asp-controller="Image" asp-action="GetAllInfoImages" class="btn btn-primary">View All Images</a>
+    </div>
+</div>

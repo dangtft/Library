@@ -251,3 +251,5 @@ C:\Users\Admin\Desktop\LTWeb2\API_LIBRARY\ConsumeWebAPI\bin\Debug\net8.0\Microso
 C:\Users\Admin\Desktop\LTWeb2\API_LIBRARY\ConsumeWebAPI\bin\Debug\net8.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
 C:\Users\Admin\Desktop\LTWeb2\API_LIBRARY\ConsumeWebAPI\bin\Debug\net8.0\Microsoft.IdentityModel.Tokens.dll
 C:\Users\Admin\Desktop\LTWeb2\API_LIBRARY\ConsumeWebAPI\bin\Debug\net8.0\System.IdentityModel.Tokens.Jwt.dll
+C:\Users\Admin\Desktop\LTWeb2\API_LIBRARY\ConsumeWebAPI\bin\Debug\net8.0\System.Net.Http.Formatting.dll
+C:\Users\Admin\Desktop\LTWeb2\API_LIBRARY\ConsumeWebAPI\bin\Debug\net8.0\Newtonsoft.Json.Bson.dll

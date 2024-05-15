@@ -1,0 +1,25 @@
+﻿@model List<ConsumeWebAPI.DTOs.ImageInfoDTO>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Image ID</th>
+            <th>File Name</th>
+            <th>Description</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var image in Model)
+        {
+            <tr>
+                <td>@image.Id</td>
+                <td>@image.FileName</td>
+                <td>@image.FileDescription</td>
+                <td>
+                    <a asp-action="Download" asp-route-id="@image.Id" class="btn btn-primary">Download</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

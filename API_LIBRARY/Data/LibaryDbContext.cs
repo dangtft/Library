@@ -14,7 +14,7 @@ namespace API_LIBRARY.Data
         public DbSet<Book> Books { get; set; }
         public DbSet<Publisher> Publisher { get; set; }
         public DbSet<BookAuthor> BookAuthor { get; set; }
-
+        public DbSet<Image> Images { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             builder.Entity<BookAuthor>()
